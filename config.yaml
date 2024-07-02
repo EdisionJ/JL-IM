@@ -1,0 +1,20 @@
+system:
+  host: 0.0.0.0
+  port: 8080
+  env: info
+
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  user: root
+  passwd: 123123
+  database: im
+  log_level: dev
+
+logger:
+  level: info
+  prefix: "[SYS]"
+  director: log
+  show_line: true
+  log_in_console: true
+
