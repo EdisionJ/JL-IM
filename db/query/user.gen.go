@@ -5,7 +5,6 @@
 package query
 
 import (
-	"IM/db/model"
 	"context"
 
 	"gorm.io/gorm"
@@ -16,6 +15,8 @@ import (
 	"gorm.io/gen/field"
 
 	"gorm.io/plugin/dbresolver"
+
+	"IM/db/model"
 )
 
 func newUser(db *gorm.DB, opts ...gen.DOOption) user {

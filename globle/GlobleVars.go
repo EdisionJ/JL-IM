@@ -2,13 +2,14 @@ package globle
 
 import (
 	"IM/config"
+	"IM/db/query"
 	"github.com/sirupsen/logrus"
-	"gorm.io/gorm"
 )
 
 // 全局变量
 var (
-	Config   config.Config
-	DataBase *gorm.DB
-	Logger   *logrus.Logger
+	Config config.Config
+	//DataBase *gorm.DB
+	Logger *logrus.Logger
+	Query  *query.Query
 )

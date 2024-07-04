@@ -1,8 +1,8 @@
 package test
 
 import (
-	"IM.com/config"
-	"IM.com/utils"
+	"IM/config"
+	"IM/utils"
 	"testing"
 )
 

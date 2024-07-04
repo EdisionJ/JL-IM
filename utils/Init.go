@@ -2,6 +2,7 @@ package utils
 
 import (
 	"IM/config"
+	"IM/db/query"
 	"IM/globle"
 	"errors"
 	"fmt"
@@ -63,7 +64,8 @@ func initGorm(c *config.Config) {
 	if err != nil {
 		panic(fmt.Sprintf("DataBase Open ERROR : %v", err))
 	}
-	globle.DataBase = db
+	//globle.DataBase = db
+	globle.Query = query.Use(db)
 	log.Println("DataBase Connect Success.")
 }
 
