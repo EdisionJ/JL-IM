@@ -1,11 +1,9 @@
 package utils
 
 import (
-	"IM/config"
 	"bytes"
 	"fmt"
 	"github.com/sirupsen/logrus"
-	"os"
 	"path"
 )
 
@@ -17,7 +15,7 @@ const (
 )
 
 type LogFormatter struct {
-	Config config.LogConf
+	Prefix string
 }
 
 func (t LogFormatter) Format(entry *logrus.Entry) ([]byte, error) {
@@ -46,22 +44,9 @@ func (t LogFormatter) Format(entry *logrus.Entry) ([]byte, error) {
 		funcVal := entry.Caller.Function
 		fileVal := fmt.Sprintf("%s:%d", path.Base(entry.Caller.File), entry.Caller.Line)
 		//自定义输出格式
-		fmt.Fprintf(b, "%s [%s] \x1b[%dm[%s]\x1b[0m %s %s %s\n", t.Config.Prefix, timestamp, level_color, entry.Level, fileVal, funcVal, entry.Message)
+		fmt.Fprintf(b, "%s [%s] \x1b[%dm[%s]\x1b[0m %s %s %s\n", t.Prefix, timestamp, level_color, entry.Level, fileVal, funcVal, entry.Message)
 	} else {
-		fmt.Fprintf(b, "%s [%s] \x1b[%dm[%s]\x1b[0m %s\n", t.Config.Prefix, timestamp, level_color, entry.Level, entry.Message)
+		fmt.Fprintf(b, "%s [%s] \x1b[%dm[%s]\x1b[0m %s\n", t.Prefix, timestamp, level_color, entry.Level, entry.Message)
 	}
 	return b.Bytes(), nil
-}
-
-func InitLogger(c config.LogConf) *logrus.Logger {
-	logger := logrus.New()                //新建一个实例
-	logger.SetOutput(os.Stdout)           //设置输出类型
-	logger.SetReportCaller(c.ShowLine)    //开启返回函数名和行号
-	logger.SetFormatter(&LogFormatter{c}) //设置自己定义的Formatter
-	level, err := logrus.ParseLevel(c.Level)
-	if err != nil {
-		level = logrus.InfoLevel
-	}
-	logger.SetLevel(level) //设置最低的Level
-	return logger
 }

@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	dsn := "root:123123@tcp(127.0.0.1:3306)/im?charset=utf8&parseTime=True&loc=Local"
+	dsn := "root:123123@tcp(192.168.175.136:3306)/im?charset=utf8&parseTime=True&loc=Local"
 	gormdb, err := gorm.Open(mysql.Open(dsn))
 	if err != nil {
 		panic("failed to connect database")

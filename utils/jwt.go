@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"IM/globle"
 	"errors"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/spf13/viper"
 	"time"
 )
 
@@ -11,15 +13,15 @@ type Claim struct {
 	jwt.RegisteredClaims
 }
 
-var secret = []byte("JL-IM")
+var secret = []byte(globle.Project)
 
 func GenToken(uid int64) (tokenStr string, err error) {
 	c := Claim{
 		UID: uid,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    "JL-IM",
+			Issuer:    globle.Project,
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 7)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * time.Duration(viper.GetInt("jwt.valid_time")))),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, c)

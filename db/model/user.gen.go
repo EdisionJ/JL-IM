@@ -12,15 +12,16 @@ const TableNameUser = "user"
 
 // User mapped from table <user>
 type User struct {
-	ID             int64     `gorm:"column:id;primaryKey;autoIncrement:true" json:"id"`
+	ID             int64     `gorm:"column:id;primaryKey" json:"id"`
 	PassWd         string    `gorm:"column:pass_wd;not null" json:"pass_wd"`
 	Name           string    `gorm:"column:name;not null" json:"name"`
-	PhoneNumber    string    `gorm:"column:phone_number;not null" json:"phone_number"`
+	PhoneNumber    string    `gorm:"column:phone_number" json:"phone_number"`
 	Email          string    `gorm:"column:email" json:"email"`
 	SelfDescribe   string    `gorm:"column:self_describe" json:"self_describe"`
-	LastOnlineTime time.Time `gorm:"column:last_online_time;not null;default:CURRENT_TIMESTAMP(3)" json:"last_online_time"`
+	LastOnlineTime time.Time `gorm:"column:last_online_time;default:CURRENT_TIMESTAMP(3)" json:"last_online_time"`
 	CreatAt        time.Time `gorm:"column:creat_at;not null;default:CURRENT_TIMESTAMP(3)" json:"creat_at"`
 	UpdateAt       time.Time `gorm:"column:update_at;not null;default:CURRENT_TIMESTAMP(3)" json:"update_at"`
+	DeleteAt       time.Time `gorm:"column:delete_at" json:"delete_at"`
 }
 
 // TableName User's table name
