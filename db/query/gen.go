@@ -16,44 +16,54 @@ import (
 )
 
 var (
-	Q       = new(Query)
-	Friend  *friend
-	Message *message
-	User    *user
+	Q         = new(Query)
+	Friend    *friend
+	FriendReq *friendReq
+	Message   *message
+	Room      *room
+	User      *user
 )
 
 func SetDefault(db *gorm.DB, opts ...gen.DOOption) {
 	*Q = *Use(db, opts...)
 	Friend = &Q.Friend
+	FriendReq = &Q.FriendReq
 	Message = &Q.Message
+	Room = &Q.Room
 	User = &Q.User
 }
 
 func Use(db *gorm.DB, opts ...gen.DOOption) *Query {
 	return &Query{
-		db:      db,
-		Friend:  newFriend(db, opts...),
-		Message: newMessage(db, opts...),
-		User:    newUser(db, opts...),
+		db:        db,
+		Friend:    newFriend(db, opts...),
+		FriendReq: newFriendReq(db, opts...),
+		Message:   newMessage(db, opts...),
+		Room:      newRoom(db, opts...),
+		User:      newUser(db, opts...),
 	}
 }
 
 type Query struct {
 	db *gorm.DB
 
-	Friend  friend
-	Message message
-	User    user
+	Friend    friend
+	FriendReq friendReq
+	Message   message
+	Room      room
+	User      user
 }
 
 func (q *Query) Available() bool { return q.db != nil }
 
 func (q *Query) clone(db *gorm.DB) *Query {
 	return &Query{
-		db:      db,
-		Friend:  q.Friend.clone(db),
-		Message: q.Message.clone(db),
-		User:    q.User.clone(db),
+		db:        db,
+		Friend:    q.Friend.clone(db),
+		FriendReq: q.FriendReq.clone(db),
+		Message:   q.Message.clone(db),
+		Room:      q.Room.clone(db),
+		User:      q.User.clone(db),
 	}
 }
 
@@ -67,24 +77,30 @@ func (q *Query) WriteDB() *Query {
 
 func (q *Query) ReplaceDB(db *gorm.DB) *Query {
 	return &Query{
-		db:      db,
-		Friend:  q.Friend.replaceDB(db),
-		Message: q.Message.replaceDB(db),
-		User:    q.User.replaceDB(db),
+		db:        db,
+		Friend:    q.Friend.replaceDB(db),
+		FriendReq: q.FriendReq.replaceDB(db),
+		Message:   q.Message.replaceDB(db),
+		Room:      q.Room.replaceDB(db),
+		User:      q.User.replaceDB(db),
 	}
 }
 
 type queryCtx struct {
-	Friend  IFriendDo
-	Message IMessageDo
-	User    IUserDo
+	Friend    IFriendDo
+	FriendReq IFriendReqDo
+	Message   IMessageDo
+	Room      IRoomDo
+	User      IUserDo
 }
 
 func (q *Query) WithContext(ctx context.Context) *queryCtx {
 	return &queryCtx{
-		Friend:  q.Friend.WithContext(ctx),
-		Message: q.Message.WithContext(ctx),
-		User:    q.User.WithContext(ctx),
+		Friend:    q.Friend.WithContext(ctx),
+		FriendReq: q.FriendReq.WithContext(ctx),
+		Message:   q.Message.WithContext(ctx),
+		Room:      q.Room.WithContext(ctx),
+		User:      q.User.WithContext(ctx),
 	}
 }
 

@@ -22,6 +22,7 @@ type User struct {
 	CreatAt        time.Time `gorm:"column:creat_at;not null;default:CURRENT_TIMESTAMP(3)" json:"creat_at"`
 	UpdateAt       time.Time `gorm:"column:update_at;not null;default:CURRENT_TIMESTAMP(3)" json:"update_at"`
 	DeleteAt       time.Time `gorm:"column:delete_at" json:"delete_at"`
+	IsOnline       int32     `gorm:"column:is_online;comment:在线：1  不在线：0" json:"is_online"` // 在线：1  不在线：0
 }
 
 // TableName User's table name

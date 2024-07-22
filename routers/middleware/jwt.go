@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func JwtMid() gin.HandlerFunc {
+func Jwt() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.Request.Header.Get("Authorization")
 		if authHeader == "" {
@@ -30,6 +30,7 @@ func JwtMid() gin.HandlerFunc {
 		}
 
 		c.Set("uid", token.UID)
+		c.Set("expire", token.ExpiresAt)
 		c.Next()
 	}
 }

@@ -13,12 +13,3 @@ type UserLogIn struct {
 	Email       string `json:"email" valid:"email"`
 	PassWD      string `json:"passwd" gorm:"size:64"`
 }
-
-type UserLogOk struct {
-	ID           int64  `json:"id"`
-	Name         string `json:"name"`
-	Token        string `json:"token"`
-	SelfDescribe string `json:"self_describe"`
-	PhoneNumber  string `json:"phone_number"`
-	Email        string `json:"email"`
-}
