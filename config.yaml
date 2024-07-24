@@ -29,3 +29,4 @@ rocketmq:
 
 jwt:
  valid_time: 24 # hours
+ reIssueToken_time: 1

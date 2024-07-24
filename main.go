@@ -2,7 +2,7 @@ package main
 
 import (
 	"IM/routers"
-	_ "IM/service/eventProcessor"
+	_ "IM/service/listener"
 	"github.com/spf13/viper"
 )
 

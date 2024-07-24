@@ -56,9 +56,6 @@ func GetFromCache(key string, value any) error {
 	ctx := context.Background()
 	data, err := globle.Rdb.Get(ctx, key).Result()
 	if err != nil {
-		if errors.Is(err, redis.Nil) {
-			return errors.New("Key does not exists. ")
-		}
 		return err
 	}
 	err = json.Unmarshal([]byte(data), value)

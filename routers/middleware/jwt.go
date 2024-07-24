@@ -3,34 +3,41 @@ package middleware
 import (
 	"IM/utils"
 	"github.com/gin-gonic/gin"
-	"strings"
+	"github.com/spf13/viper"
+	"time"
 )
 
 func Jwt() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.Request.Header.Get("Authorization")
-		if authHeader == "" {
-			utils.RspWithMsg(c, 1, false, "无权限访问")
-			c.Abort()
-			return
-		}
-		//ID@eyJhbGciOiJIUzI1N...
-		parts := strings.SplitN(authHeader, "@", 2)
-		if !(len(parts) == 2 && parts[0] == "ID") {
-			utils.RspWithMsg(c, 1, false, "无权限访问")
+		strToken := c.Request.Header.Get("Authorization")
+		if strToken == "" {
+			utils.DefaultRsp(c, 1, false, "无权限访问")
 			c.Abort()
 			return
 		}
 
-		token, err := utils.ParseToken(parts[1])
+		token, err := utils.ParseToken(strToken)
 		if err != nil {
-			utils.RspWithMsg(c, 1, false, "无权限访问")
+			utils.DefaultRsp(c, 1, false, "无权限访问")
 			c.Abort()
 			return
 		}
 
+		if token.ExpiresAt.Before(time.Now()) {
+			utils.DefaultRsp(c, 1, false, "登陆状态失效，请重新登录")
+			c.Abort()
+			return
+		}
+
+		if token.ExpiresAt.Sub(time.Now()) <= time.Hour*time.Duration(viper.GetInt("jwt.reIssueToken_time")) {
+			jwtToken, _ := utils.GenToken(token.UID)
+			c.Set("Token", jwtToken)
+		}
 		c.Set("uid", token.UID)
-		c.Set("expire", token.ExpiresAt)
 		c.Next()
+
+		if Token, isExist := c.Get("Token"); isExist {
+			c.Writer.Header().Set("Token", Token.(string))
+		}
 	}
 }

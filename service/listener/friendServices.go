@@ -13,6 +13,10 @@ import (
 	"github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/spf13/viper"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 var FriendReqQ = globle.Db.FriendReq
@@ -43,11 +47,26 @@ func init() {
 	if err != nil {
 		globle.Logger.Fatal("好友服务启动失败: ", err)
 	}
+
+	go func() {
+		// 监听信号
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+		<-sigChan // 等待信号
+
+		// 收到信号后，关闭消费者
+		if err := pc.Shutdown(); err != nil {
+			log.Printf("关闭消费者失败: %v", err)
+		}
+		os.Exit(0)
+	}()
+
 }
 
 func friendReq(ctx context.Context, ext ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 	for _, msg := range ext {
-		var reqInfo RR.AddFriend
+		var reqInfo RR.AddFriendInfo
 		err := json.Unmarshal(msg.Body, &reqInfo)
 		if err != nil {
 			globle.Logger.Println("json.Unmarshal发生错误 ", err)
@@ -80,7 +99,7 @@ func friendReq(ctx context.Context, ext ...*primitive.MessageExt) (consumer.Cons
 
 func friendAdd(ctx context.Context, ext ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 	for _, msg := range ext {
-		var info RR.AddFriend
+		var info RR.AddFriendInfo
 		err := json.Unmarshal(msg.Body, &info)
 		if err != nil {
 			globle.Logger.Warnf("json.Unmarshal发生错误 ", err)
@@ -112,12 +131,29 @@ func friendAdd(ctx context.Context, ext ...*primitive.MessageExt) (consumer.Cons
 				return consumer.ConsumeRetryLater, err
 			}
 
+			//获取用户信息
+			var u1 = model.User{}
+			key1 := fmt.Sprintf(enum.UserCacheByID, info.Uid)
+			var u2 = model.User{}
+			key2 := fmt.Sprintf(enum.UserCacheByID, info.FriendId)
+			err = utils.Get(key1, &u1, func() (any, error) {
+				return UserQ.WithContext(ctx).Where(UserQ.ID.Eq(info.Uid)).First()
+			})
+			err = utils.Get(key2, &u2, func() (any, error) {
+				return UserQ.WithContext(ctx).Where(UserQ.ID.Eq(info.FriendId)).First()
+			})
+			if err != nil {
+				globle.Logger.Error("查询数据出错： ", err)
+				return consumer.ConsumeRetryLater, err
+			}
 			//更新好友列表
 			var friendShip1 model.Friend
 			friendShip1.ID = info.Uid
 			friendShip1.FriendID = info.FriendId
+			friendShip1.NickName = u1.Name
 			var friendShip2 model.Friend
 			friendShip2.ID = info.FriendId
+			friendShip2.NickName = u2.Name
 			friendShip2.FriendID = info.Uid
 			err = FriendQ.WithContext(ctx).
 				Select(FriendQ.ID, FriendQ.FriendID).
@@ -128,22 +164,6 @@ func friendAdd(ctx context.Context, ext ...*primitive.MessageExt) (consumer.Cons
 				if err != nil {
 					globle.Logger.Error("事务回滚失败： ", err)
 				}
-				return consumer.ConsumeRetryLater, err
-			}
-
-			//获取用户信息
-			var u1 = model.User{}
-			key1 := fmt.Sprintf(enum.UserCacheByID, info.Uid)
-			var u2 = model.User{}
-			key2 := fmt.Sprintf(enum.UserCacheByID, info.Uid)
-			err = utils.Get(key1, &u1, func() (any, error) {
-				return UserQ.WithContext(ctx).Where(UserQ.ID.Eq(info.Uid)).First()
-			})
-			err = utils.Get(key2, &u2, func() (any, error) {
-				return UserQ.WithContext(ctx).Where(UserQ.ID.Eq(info.FriendId)).First()
-			})
-			if err != nil {
-				globle.Logger.Error("查询数据出错： ", err)
 				return consumer.ConsumeRetryLater, err
 			}
 
@@ -159,7 +179,7 @@ func friendAdd(ctx context.Context, ext ...*primitive.MessageExt) (consumer.Cons
 			}
 			var room2 = model.Room{
 				RoomID:   roomID,
-				UID:      info.Uid,
+				UID:      info.FriendId,
 				Nickname: u2.Name,
 				Type:     enum.RoomTypePrivate,
 				Role:     enum.RoomRoleNormal,

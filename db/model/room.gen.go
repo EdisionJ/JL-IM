@@ -12,7 +12,7 @@ const TableNameRoom = "room"
 
 // Room mapped from table <room>
 type Room struct {
-	RoomID   int64     `gorm:"column:room_id;primaryKey" json:"room_id"`
+	RoomID   int64     `gorm:"column:room_id;not null" json:"room_id"`
 	UID      int64     `gorm:"column:uid;not null" json:"uid"`
 	Type     int32     `gorm:"column:type;comment:0：私聊  1：群聊" json:"type"`                // 0：私聊  1：群聊
 	Nickname string    `gorm:"column:nickname;comment:聊天室内昵称" json:"nickname"`            // 聊天室内昵称

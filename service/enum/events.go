@@ -1,8 +1,8 @@
 package enum
 
-// event
+// topics
 const (
-	UserLogSignUp  = "UserLogSignUp"
+	UserSignUp     = "UserSignUp"
 	UserLogInOrOut = "UserLogInOrOut"
 	UserFriendReq  = "UserFriendReq"
 	UserFriendAdd  = "UserFriendAdd"
@@ -10,7 +10,7 @@ const (
 
 // group
 const (
-	UserLogSignUpGroup     = UserLogSignUp + "-G"
+	UserSignUpGroup        = UserSignUp + "-G"
 	UserLogInOrOutGroup    = "UserLogInOrOut" + "-G"
 	UserFriendServiceGroup = "UserFriendService" + "-G"
 )

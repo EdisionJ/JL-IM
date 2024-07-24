@@ -17,7 +17,7 @@ type RepData struct {
 	Data    any    `json:"data"`
 }
 
-func RspWithMsg(c *gin.Context, code int, ok bool, msg string) {
+func DefaultRsp(c *gin.Context, code int, ok bool, msg string) {
 	if ok {
 		c.JSON(code, RepData{
 			Code:    Success,
@@ -33,17 +33,19 @@ func RspWithMsg(c *gin.Context, code int, ok bool, msg string) {
 	}
 }
 
-func RspWithData(c *gin.Context, code int, ok bool, data any) {
+func RspWithData(c *gin.Context, code int, ok bool, msg string, data any) {
 	if ok {
 		c.JSON(code, RepData{
 			Code:    Success,
 			Success: ok,
+			Message: msg,
 			Data:    data,
 		})
 	} else {
 		c.JSON(code, RepData{
 			Code:    Fail,
 			Success: ok,
+			Message: msg,
 			Data:    data,
 		})
 	}

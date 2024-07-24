@@ -13,6 +13,10 @@ import (
 	"github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/spf13/viper"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -33,6 +37,20 @@ func init() {
 	if err != nil {
 		globle.Logger.Fatal("登录服务启动失败: ", err)
 	}
+
+	go func() {
+		// 监听信号
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+		<-sigChan // 等待信号
+
+		// 收到信号后，关闭消费者
+		if err := pc.Shutdown(); err != nil {
+			log.Printf("关闭消费者失败: %v", err)
+		}
+		os.Exit(0)
+	}()
 }
 
 func login(ctx context.Context, ext ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
@@ -41,7 +59,7 @@ func login(ctx context.Context, ext ...*primitive.MessageExt) (consumer.ConsumeR
 		err := json.Unmarshal(msg.Body, &userInfo)
 		if err != nil {
 			globle.Logger.Errorf("json.Unmarshal发生错误: %v", err)
-			return consumer.Rollback, err
+			return consumer.ConsumeRetryLater, err
 		}
 		if msg.Flag == enum.LogOut {
 			//设置离线状态
@@ -56,7 +74,7 @@ func login(ctx context.Context, ext ...*primitive.MessageExt) (consumer.ConsumeR
 			err = utils.SetToCache(keyName, userInfo)
 			if err != nil {
 				globle.Logger.Warnf("添加缓存时发生错误: %v", err)
-				return consumer.Rollback, err
+				return consumer.ConsumeRetryLater, err
 			}
 			//设置在线状态
 			_, err = UserQ.WithContext(ctx).
