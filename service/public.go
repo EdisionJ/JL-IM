@@ -3,8 +3,9 @@ package service
 import (
 	"IM/db/model"
 	"IM/globle"
-	"IM/service/RR"
 	"IM/service/enum"
+	"IM/service/requestModels"
+	"IM/service/responseModels"
 	"IM/utils"
 	"context"
 	"encoding/json"
@@ -20,7 +21,7 @@ var UserQ = globle.Db.User
 
 func UserSignUp(c *gin.Context) {
 	ctx := context.Background()
-	var userInfo RR.UserSingUp
+	var userInfo requestModels.UserSingUp
 	err := c.ShouldBindJSON(&userInfo)
 	isValid, _ := govalidator.ValidateStruct(userInfo)
 	switch {
@@ -75,7 +76,7 @@ func UserSignUp(c *gin.Context) {
 
 func UserLogIn(c *gin.Context) {
 	ctx := context.Background()
-	var loginer RR.UserLogIn
+	var loginer requestModels.UserLogIn
 	err := c.ShouldBindJSON(&loginer)
 	isValid, _ := govalidator.ValidateStruct(loginer)
 	switch {
@@ -110,7 +111,7 @@ func UserLogIn(c *gin.Context) {
 			return
 		}
 		//密码验证
-		if loginer.PassWD != user.PassWd {
+		if loginer.PassWD != user.Passwd {
 			utils.DefaultRsp(c, http.StatusOK, false, "密码错误！")
 			return
 		} else {
@@ -121,12 +122,12 @@ func UserLogIn(c *gin.Context) {
 				utils.DefaultRsp(c, http.StatusInternalServerError, false, "系统错误，请稍后再试！")
 				return
 			}
-			data := globle.UserInfo{
-				ID:           user.ID,
-				Name:         user.Name,
-				SelfDescribe: user.SelfDescribe,
-				PhoneNumber:  user.PhoneNumber,
-				Email:        user.Email,
+			data := responseModels.UserInfo{
+				ID:          user.ID,
+				Avatar:      user.Avatar,
+				Name:        user.Name,
+				PhoneNumber: user.PhoneNumber,
+				Email:       user.Email,
 			}
 
 			//发送登陆消息

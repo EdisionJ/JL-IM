@@ -3,7 +3,6 @@ package test
 import (
 	"IM/db/model"
 	"IM/db/query"
-	"IM/service/RR"
 	"IM/utils"
 	"context"
 	"gorm.io/driver/mysql"
@@ -18,7 +17,7 @@ func TestGorm(t *testing.T) {
 		panic("failed to connect database")
 	}
 
-	newUser := RR.UserSingUp{
+	newUser := ReqModels.UserSingUp{
 		Name:        "jiangshiwei",
 		Email:       "jiangshiwei76@163.com",
 		PhoneNumber: "17602832214",
@@ -33,7 +32,7 @@ func TestGorm(t *testing.T) {
 	}
 	var NewUser model.User
 	NewUser.Name = newUser.Name
-	NewUser.PassWd = utils.EncodeWithSHA256(newUser.PassWD)
+	NewUser.Passwd = utils.EncodeWithSHA256(newUser.PassWD)
 	NewUser.PhoneNumber = newUser.PhoneNumber
 	if err := UserQ.WithContext(context.Background()).Create(&NewUser); err != nil {
 		println(err)

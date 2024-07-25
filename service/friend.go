@@ -3,8 +3,9 @@ package service
 import (
 	"IM/db/model"
 	"IM/globle"
-	"IM/service/RR"
 	"IM/service/enum"
+	"IM/service/requestModels"
+	"IM/service/responseModels"
 	"IM/utils"
 	"context"
 	"encoding/json"
@@ -21,7 +22,7 @@ var FriendQ = globle.Db.Friend
 
 func FriendReq(c *gin.Context) {
 	ctx := context.Background()
-	var reqInfo RR.AddFriendInfo
+	var reqInfo requestModels.AddFriendInfo
 	err := c.ShouldBindJSON(&reqInfo)
 	if err != nil {
 		utils.DefaultRsp(c, http.StatusBadRequest, false, "非法请求！")
@@ -50,7 +51,7 @@ func FriendReq(c *gin.Context) {
 			utils.DefaultRsp(c, http.StatusBadRequest, false, "用户不存在！")
 			return
 		}
-		globle.Logger.Error("查找用户时发生错误！", err)
+		globle.Logger.Errorln("查找用户时发生错误！", err)
 		utils.DefaultRsp(c, http.StatusInternalServerError, false, "系统错误，请稍后再试！")
 		return
 	}
@@ -58,7 +59,7 @@ func FriendReq(c *gin.Context) {
 	//是否已经是好友
 	isFriend, err := IsFriend(from, to)
 	if err != nil {
-		globle.Logger.Error("查找好友关系时发生错误！", err)
+		globle.Logger.Errorln("查找好友关系时发生错误！", err)
 		utils.DefaultRsp(c, http.StatusInternalServerError, false, "系统错误，请稍后再试！")
 		return
 	}
@@ -71,11 +72,11 @@ func FriendReq(c *gin.Context) {
 	key = fmt.Sprintf(enum.UserApplyCacheByUidAndFriendUid, from, to)
 	fr := model.FriendReq{}
 	err = utils.Get(key, &fr, func() (any, error) {
-		return FriendReqQ.WithContext(ctx).Where(FriendReqQ.UID.Eq(from), FriendReqQ.FriendID.Eq(to)).First()
+		return FriendReqQ.WithContext(ctx).Where(FriendReqQ.ID.Eq(from), FriendReqQ.FriendID.Eq(to), FriendReqQ.IsAgree.Eq(enum.FriendReqNotYetAgreed)).First()
 	})
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			globle.Logger.Error("查找好友请求时发生错误！", err)
+			globle.Logger.Errorln("查找好友请求时发生错误！", err)
 			utils.DefaultRsp(c, http.StatusInternalServerError, false, "系统错误，请稍后再试！")
 			return
 		}
@@ -95,11 +96,11 @@ func FriendReq(c *gin.Context) {
 	key = fmt.Sprintf(enum.UserApplyCacheByUidAndFriendUid, to, from)
 	fr = model.FriendReq{}
 	err = utils.Get(key, &fr, func() (any, error) {
-		return FriendReqQ.WithContext(ctx).Where(FriendReqQ.UID.Eq(to), FriendReqQ.FriendID.Eq(from)).First()
+		return FriendReqQ.WithContext(ctx).Where(FriendReqQ.ID.Eq(to), FriendReqQ.FriendID.Eq(from), FriendReqQ.IsAgree.Eq(enum.FriendReqNotYetAgreed)).First()
 	})
 	if err != nil {
 		if !errors.Is(err, gorm.ErrRecordNotFound) {
-			globle.Logger.Error("查找好友请求时发生错误！", err)
+			globle.Logger.Errorln("查找好友请求时发生错误！", err)
 			utils.DefaultRsp(c, http.StatusInternalServerError, false, "系统错误，请稍后再试！")
 			return
 		}
@@ -114,7 +115,7 @@ func FriendReq(c *gin.Context) {
 	//没有查到记录，那么发送好友请求
 	reqBytes, err := json.Marshal(reqInfo)
 	if err != nil {
-		globle.Logger.Error("json.Marshal发生错误！", err)
+		globle.Logger.Errorln("json.Marshal发生错误！", err)
 		utils.DefaultRsp(c, http.StatusInternalServerError, false, "系统错误，请稍后再试！")
 		return
 	}
@@ -125,7 +126,7 @@ func FriendReq(c *gin.Context) {
 
 	r, err := globle.RocketProducer.SendSync(ctx, msg)
 	if err != nil {
-		globle.Logger.Error("好友请求消息发送失败！", err, r)
+		globle.Logger.Errorln("好友请求消息发送失败！", err, r)
 		utils.DefaultRsp(c, http.StatusInternalServerError, false, "系统错误，请稍后再试！")
 		return
 	}
@@ -133,6 +134,24 @@ func FriendReq(c *gin.Context) {
 	return
 }
 
+func GetFriendReqList(c *gin.Context) {
+	id, _ := c.Get("uid")
+	uid := id.(int64)
+	reqList := []responseModels.FriendReqInfo{}
+	ctx := context.Background()
+	err := FriendReqQ.WithContext(ctx).
+		Where(FriendReqQ.FriendID.Eq(uid), FriendReqQ.IsAgree.Eq(enum.FriendReqNotYetAgreed)).
+		LeftJoin(UserQ, UserQ.ID.EqCol(FriendReqQ.ID)).
+		Select(UserQ.Avatar, FriendReqQ.ID, FriendReqQ.Msg).
+		Scan(&reqList)
+	if err != nil {
+		globle.Logger.Errorln("查询数据库失败： ", err)
+		utils.DefaultRsp(c, http.StatusInternalServerError, false, "系统错误，请稍后再试！")
+		return
+	}
+	utils.RspWithData(c, http.StatusOK, true, "请求列表获取成功", reqList)
+	return
+}
 func IsFriend(uid1, uid2 int64) (bool, error) {
 	key := fmt.Sprintf(enum.UserFriendCacheByUidAndFriendUid, uid1, uid2)
 	fr := model.Friend{}
@@ -148,10 +167,10 @@ func IsFriend(uid1, uid2 int64) (bool, error) {
 	return true, nil
 }
 
-func addFriend(ctx context.Context, c *gin.Context, req RR.AddFriendInfo) {
+func addFriend(ctx context.Context, c *gin.Context, req requestModels.AddFriendInfo) {
 	reqByte, err := json.Marshal(req)
 	if err != nil {
-		globle.Logger.Error("json.Marshal发生错误！", err)
+		globle.Logger.Errorln("json.Marshal发生错误！", err)
 		utils.DefaultRsp(c, http.StatusInternalServerError, false, "系统错误，请稍后再试！")
 		return
 	}
@@ -162,7 +181,7 @@ func addFriend(ctx context.Context, c *gin.Context, req RR.AddFriendInfo) {
 
 	r, err := globle.RocketProducer.SendSync(ctx, msg)
 	if err != nil {
-		globle.Logger.Error("添加好友消息发送失败！", err, r)
+		globle.Logger.Errorln("添加好友消息发送失败！", err, r)
 		utils.DefaultRsp(c, http.StatusInternalServerError, false, "系统错误，请稍后再试！")
 		return
 	}

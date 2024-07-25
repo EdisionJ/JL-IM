@@ -3,8 +3,8 @@ package listener
 import (
 	"IM/db/model"
 	"IM/globle"
-	"IM/service/RR"
 	"IM/service/enum"
+	"IM/service/requestModels"
 	"IM/utils"
 	"context"
 	"encoding/json"
@@ -21,7 +21,7 @@ import (
 
 var FriendReqQ = globle.Db.FriendReq
 var FriendQ = globle.Db.Friend
-var RoomQ = globle.Db.Room
+var GroupQ = globle.Db.Group
 
 func init() {
 	host := viper.GetString("rocketmq.host")
@@ -66,20 +66,20 @@ func init() {
 
 func friendReq(ctx context.Context, ext ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 	for _, msg := range ext {
-		var reqInfo RR.AddFriendInfo
+		var reqInfo requestModels.AddFriendInfo
 		err := json.Unmarshal(msg.Body, &reqInfo)
 		if err != nil {
 			globle.Logger.Println("json.Unmarshal发生错误 ", err)
 			return consumer.Rollback, err
 		}
 		var fr model.FriendReq
-		fr.UID = reqInfo.Uid
+		fr.ID = reqInfo.Uid
 		fr.FriendID = reqInfo.FriendId
 		fr.Msg = reqInfo.ReqMsg
 
 		//写入数据库
 		err = FriendReqQ.WithContext(ctx).
-			Select(FriendReqQ.UID, FriendReqQ.FriendID, FriendReqQ.Msg).
+			Select(FriendReqQ.ID, FriendReqQ.FriendID, FriendReqQ.Msg).
 			Create(&fr)
 		if err != nil {
 			globle.Logger.Warnf("数据库错误: %v", err)
@@ -87,7 +87,9 @@ func friendReq(ctx context.Context, ext ...*primitive.MessageExt) (consumer.Cons
 		}
 
 		//写入缓存
-		key := fmt.Sprintf(enum.UserApplyCacheByUidAndFriendUid, fr.UID, fr.FriendID)
+		key := fmt.Sprintf(enum.UserApplyCacheByUidAndFriendUid, fr.ID, fr.FriendID)
+		err = utils.SetToCache(key, fr)
+		key = fmt.Sprintf(enum.UserApplyCacheByFriendUid, fr.FriendID)
 		err = utils.SetToCache(key, fr)
 		if err != nil {
 			globle.Logger.Warnf("设置缓存时遇到错误: %v", err)
@@ -99,7 +101,7 @@ func friendReq(ctx context.Context, ext ...*primitive.MessageExt) (consumer.Cons
 
 func friendAdd(ctx context.Context, ext ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 	for _, msg := range ext {
-		var info RR.AddFriendInfo
+		var info requestModels.AddFriendInfo
 		err := json.Unmarshal(msg.Body, &info)
 		if err != nil {
 			globle.Logger.Warnf("json.Unmarshal发生错误 ", err)
@@ -120,7 +122,7 @@ func friendAdd(ctx context.Context, ext ...*primitive.MessageExt) (consumer.Cons
 			tx := globle.Db.Begin()
 			//设置好友请求状态
 			_, err = FriendReqQ.WithContext(ctx).
-				Where(FriendReqQ.UID.Eq(info.FriendId), FriendReqQ.FriendID.Eq(info.Uid)).
+				Where(FriendReqQ.ID.Eq(info.FriendId), FriendReqQ.FriendID.Eq(info.Uid)).
 				Update(FriendReqQ.IsAgree, enum.FriendReqAgree)
 			if err != nil {
 				globle.Logger.Error("数据库数据更新失败： ", err)
@@ -146,17 +148,37 @@ func friendAdd(ctx context.Context, ext ...*primitive.MessageExt) (consumer.Cons
 				globle.Logger.Error("查询数据出错： ", err)
 				return consumer.ConsumeRetryLater, err
 			}
+
+			//新建聊天室
+			roomID := utils.GenID()
+			room := model.Group{
+				ID:   roomID,
+				Type: enum.RoomTypePrivate,
+			}
+			err = GroupQ.WithContext(ctx).
+				Select(GroupQ.ID, GroupQ.Type).
+				Create(&room)
+			if err != nil {
+				globle.Logger.Error("数据库插入数据失败： ", err)
+				err := tx.Rollback()
+				if err != nil {
+					globle.Logger.Error("事务回滚失败： ", err)
+				}
+				return consumer.ConsumeRetryLater, err
+			}
 			//更新好友列表
 			var friendShip1 model.Friend
 			friendShip1.ID = info.Uid
 			friendShip1.FriendID = info.FriendId
 			friendShip1.NickName = u1.Name
+			friendShip1.Room = roomID
 			var friendShip2 model.Friend
 			friendShip2.ID = info.FriendId
-			friendShip2.NickName = u2.Name
 			friendShip2.FriendID = info.Uid
+			friendShip2.NickName = u2.Name
+			friendShip2.Room = roomID
 			err = FriendQ.WithContext(ctx).
-				Select(FriendQ.ID, FriendQ.FriendID).
+				Select(FriendQ.ID, FriendQ.FriendID, FriendQ.NickName, FriendQ.Room).
 				Create(&friendShip1, &friendShip2)
 			if err != nil {
 				globle.Logger.Error("数据库插入数据失败： ", err)
@@ -167,27 +189,6 @@ func friendAdd(ctx context.Context, ext ...*primitive.MessageExt) (consumer.Cons
 				return consumer.ConsumeRetryLater, err
 			}
 
-			//更新聊天室列表
-			roomID := utils.GenID()
-			var room1 = model.Room{
-				RoomID:   roomID,
-				UID:      info.Uid,
-				Nickname: u1.Name,
-				Type:     enum.RoomTypePrivate,
-				Role:     enum.RoomRoleNormal,
-				Ban:      enum.NotBannedInRoom,
-			}
-			var room2 = model.Room{
-				RoomID:   roomID,
-				UID:      info.FriendId,
-				Nickname: u2.Name,
-				Type:     enum.RoomTypePrivate,
-				Role:     enum.RoomRoleNormal,
-				Ban:      enum.NotBannedInRoom,
-			}
-			err = RoomQ.WithContext(ctx).
-				Omit(RoomQ.JoinAt, RoomQ.ExitAt, RoomQ.UpdateAt).
-				Create(&room1, &room2)
 			if err != nil {
 				globle.Logger.Error("数据库插入数据失败： ", err)
 				err := tx.Rollback()
@@ -198,6 +199,14 @@ func friendAdd(ctx context.Context, ext ...*primitive.MessageExt) (consumer.Cons
 			}
 			//提交事务
 			tx.Commit()
+			//
+			key = fmt.Sprintf(enum.UserFriendCacheByUidAndFriendUid, info.Uid, info.FriendId)
+			err = utils.SetToCache(key, &friendShip1)
+			key = fmt.Sprintf(enum.UserFriendCacheByUidAndFriendUid, info.FriendId, info.Uid)
+			err = utils.SetToCache(key, &friendShip2)
+			if err != nil {
+				globle.Logger.Warnln("设置好友缓存失败： ", err)
+			}
 			return consumer.ConsumeSuccess, nil
 		//拒绝好友请求
 		case enum.FriendReqRefuse:
@@ -210,7 +219,7 @@ func friendAdd(ctx context.Context, ext ...*primitive.MessageExt) (consumer.Cons
 			}
 			//设置好友请求状态
 			_, err = FriendReqQ.WithContext(ctx).
-				Where(FriendReqQ.UID.Eq(info.FriendId), FriendReqQ.FriendID.Eq(info.Uid)).
+				Where(FriendReqQ.ID.Eq(info.FriendId), FriendReqQ.FriendID.Eq(info.Uid)).
 				Update(FriendReqQ.IsAgree, enum.FriendReqRefuse)
 			if err != nil {
 				globle.Logger.Error("数据库数据更新失败： ", err)

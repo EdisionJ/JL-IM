@@ -21,7 +21,7 @@ func Router() *gin.Engine {
 	user.Use(middleware.Jwt())
 	{
 		user.POST("addFriend", service.FriendReq)
-		user.GET("getFriendReqList")
+		user.GET("getFriendReqList", service.GetFriendReqList)
 	}
 
 	//chatRoom := r.Group("/api/group")
@@ -32,12 +32,12 @@ func Router() *gin.Engine {
 	//
 	//}
 	//
-	//chat := r.Group("/contact")
-	//chat.Use(middleware.Jwt())
-	//{
-	//	chat.POST("sendMsg")
-	//	chat.GET("getMsg")
-	//}
+	chat := r.Group("/contact")
+	chat.Use(middleware.Jwt())
+	{
+		chat.POST("sendMsg")
+		chat.GET("getMsg")
+	}
 
 	return r
 }

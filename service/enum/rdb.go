@@ -31,6 +31,7 @@ const (
 
 	// 好友申请缓存
 	UserApplyCacheByUidAndFriendUid = UserApply + "%d_%d"
+	UserApplyCacheByFriendUid       = UserApply + "%d"
 
 	// 会话缓存
 	ContactCacheById = Contact + "%d"

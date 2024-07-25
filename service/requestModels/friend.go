@@ -1,4 +1,4 @@
-package RR
+package requestModels
 
 type AddFriendInfo struct {
 	Uid      int64  `json:"uid"`

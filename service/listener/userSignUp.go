@@ -3,8 +3,8 @@ package listener
 import (
 	"IM/db/model"
 	"IM/globle"
-	"IM/service/RR"
 	"IM/service/enum"
+	"IM/service/requestModels"
 	"IM/utils"
 	"context"
 	"encoding/json"
@@ -51,7 +51,7 @@ func init() {
 
 func signUp(ctx context.Context, ext ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 	for _, msg := range ext {
-		var userInfo RR.UserSingUp
+		var userInfo requestModels.UserSingUp
 		err := json.Unmarshal(msg.Body, &userInfo)
 		if err != nil {
 			globle.Logger.Warnf("json.Unmarshal发生错误 ", err)
@@ -60,11 +60,11 @@ func signUp(ctx context.Context, ext ...*primitive.MessageExt) (consumer.Consume
 		var NewUser model.User
 		NewUser.ID = utils.GenID()
 		NewUser.Name = userInfo.Name
-		NewUser.PassWd = userInfo.PassWD
+		NewUser.Passwd = userInfo.PassWD
 		NewUser.PhoneNumber = userInfo.PhoneNumber
 		NewUser.Email = userInfo.Email
 		err = UserQ.WithContext(ctx).
-			Select(UserQ.ID, UserQ.Name, UserQ.PassWd, UserQ.PhoneNumber, UserQ.Email).
+			Select(UserQ.ID, UserQ.Name, UserQ.Passwd, UserQ.PhoneNumber, UserQ.Email).
 			Create(&NewUser)
 		if err != nil {
 			globle.Logger.Error("添加用户时发生错误！", err)

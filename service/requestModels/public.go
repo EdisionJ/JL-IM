@@ -1,4 +1,4 @@
-package RR
+package requestModels
 
 type UserSingUp struct {
 	Name        string `json:"name"`

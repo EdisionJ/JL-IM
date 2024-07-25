@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"IM/globle"
 	"IM/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
@@ -9,7 +10,7 @@ import (
 
 func Jwt() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		strToken := c.Request.Header.Get("Authorization")
+		strToken := c.Request.Header.Get("Token")
 		if strToken == "" {
 			utils.DefaultRsp(c, 1, false, "无权限访问")
 			c.Abort()
@@ -30,8 +31,13 @@ func Jwt() gin.HandlerFunc {
 		}
 
 		if token.ExpiresAt.Sub(time.Now()) <= time.Hour*time.Duration(viper.GetInt("jwt.reIssueToken_time")) {
-			jwtToken, _ := utils.GenToken(token.UID)
+			jwtToken, err := utils.GenToken(token.UID)
+			if err != nil {
+				globle.Logger.Warnln("Token生成失败： ", err)
+			}
 			c.Set("Token", jwtToken)
+		} else {
+			c.Set("Token", strToken)
 		}
 		c.Set("uid", token.UID)
 		c.Next()

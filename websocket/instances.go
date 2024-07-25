@@ -1,4 +1,4 @@
-package globle
+package websocket
 
 import (
 	cmap "github.com/orcaman/concurrent-map/v2"
@@ -7,14 +7,14 @@ import (
 )
 
 type Room struct {
-	//RoomID
+	RoomID int64
 	//RoomInfo
 	//Users
 }
 
 type User struct {
 	ID      int64
-	Info    UserInfo
+	Info    RspModels.UserInfo
 	Channel *websocket.Conn
 }
 

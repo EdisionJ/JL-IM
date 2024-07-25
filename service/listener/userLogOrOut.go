@@ -5,6 +5,7 @@ import (
 	"IM/globle"
 	_ "IM/initModules"
 	"IM/service/enum"
+	"IM/service/responseModels"
 	"IM/utils"
 	"context"
 	"encoding/json"
@@ -55,7 +56,7 @@ func init() {
 
 func login(ctx context.Context, ext ...*primitive.MessageExt) (consumer.ConsumeResult, error) {
 	for _, msg := range ext {
-		var userInfo globle.UserInfo
+		var userInfo responseModels.UserInfo
 		err := json.Unmarshal(msg.Body, &userInfo)
 		if err != nil {
 			globle.Logger.Errorf("json.Unmarshal发生错误: %v", err)
