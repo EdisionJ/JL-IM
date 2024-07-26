@@ -3,6 +3,7 @@ package test
 import (
 	"IM/db/model"
 	"IM/db/query"
+	"IM/service/requestModels"
 	"IM/utils"
 	"context"
 	"gorm.io/driver/mysql"
@@ -17,7 +18,7 @@ func TestGorm(t *testing.T) {
 		panic("failed to connect database")
 	}
 
-	newUser := ReqModels.UserSingUp{
+	newUser := requestModels.UserSingUp{
 		Name:        "jiangshiwei",
 		Email:       "jiangshiwei76@163.com",
 		PhoneNumber: "17602832214",

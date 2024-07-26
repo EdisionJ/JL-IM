@@ -1,20 +1,20 @@
-package websocket
+package websocketSereve
 
 import (
+	"github.com/gorilla/websocket"
 	cmap "github.com/orcaman/concurrent-map/v2"
-	"golang.org/x/net/websocket"
 	"strconv"
 )
 
 type Room struct {
-	RoomID int64
-	//RoomInfo
-	//Users
+	RoomID      int64
+	ActiveUsers int
+	Users       map[int64]*websocket.Conn
 }
 
 type User struct {
 	ID      int64
-	Info    RspModels.UserInfo
+	Rooms   []int64
 	Channel *websocket.Conn
 }
 
@@ -25,11 +25,11 @@ var userMap = cmap.New[*User]()
 var roomMap = cmap.New[*Room]()
 
 /**********************  Room  **********************/
-func RoomMapAdd(roomId int64, room *Room) {
+func RoomMapSet(roomId int64, room *Room) {
 	strUid := GetStrId(roomId)
 	roomMap.Set(strUid, room)
 }
-func RoomMapGet(roomId int64) (*Room, bool) {
+func RoomMapGet(roomId int64) (room *Room, ok bool) {
 	strUid := GetStrId(roomId)
 	return roomMap.Get(strUid)
 }
@@ -37,9 +37,33 @@ func RoomMapDel(roomId int64) {
 	strUid := GetStrId(roomId)
 	roomMap.Remove(strUid)
 }
+func JoinRoom(roomID, uid int64, conn *websocket.Conn) {
+	room, ok := RoomMapGet(roomID)
+	if !ok {
+		room = &Room{
+			RoomID: roomID,
+			Users:  make(map[int64]*websocket.Conn, 0),
+		}
+		room.Users[uid] = conn
+		room.ActiveUsers++
+		RoomMapSet(roomID, room)
+	} else {
+		room.Users[uid] = conn
+		room.ActiveUsers++
+	}
+}
+func ExitFromRoom(roomID, uid int64) {
+	room, _ := RoomMapGet(roomID)
+	delete(room.Users, uid)
+	room.ActiveUsers--
+	if room.ActiveUsers == 0 {
+		//清理不活跃的房间
+		RoomMapDel(roomID)
+	}
+}
 
 /**********************  User  **********************/
-func UserMapAdd(user *User) {
+func UserMapSet(user *User) {
 	strUid := GetStrId(user.ID)
 	userMap.Set(strUid, user)
 }
